@@ -63,7 +63,7 @@ menu_install() {
         "coursera.org" "udemy.com" "medium.com" "stackoverflow.com"
         "bbc.com" "cnn.com" "reuters.com" "nytimes.com"
         "lenta.ru" "rbc.ru" "ria.ru" "kommersant.ru"
-        "stepik.org" "duolingo.com" "khanacademy.org" "ted.com"
+        "stepik.org" "duolingo.com" "khanacademy.org" "ted.com" "rutube.ru" "live.vkvideo.ru" 
     )
     
     for i in "${!domains[@]}"; do
@@ -71,7 +71,7 @@ menu_install() {
         [[ $(( (i+1) % 2 )) -eq 0 ]] && echo ""
     done
     
-    read -p "Ваш выбор [1-20]: " d_idx
+    read -p "Ваш выбор [1-22]: " d_idx
     DOMAIN=${domains[$((d_idx-1))]}
     DOMAIN=${DOMAIN:-google.com}
 
