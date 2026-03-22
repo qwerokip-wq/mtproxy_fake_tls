@@ -54,9 +54,9 @@ select_domain() {
         "gitlab.com" "bitbucket.org" "atlassian.com" "slack.com"
     )
     
-    echo -e "\n${CYAN}════════════════════════════════════════════════════════${NC}"
-    echo -e "${CYAN}        Выберите домен для прокси #${proxy_num}${NC}"
-    echo -e "${CYAN}════════════════════════════════════════════════════════${NC}\n"
+    echo -e "\n${CYAN}════════════════════════════════════════════════════════${NC}" >&2
+    echo -e "${CYAN}        Выберите домен для прокси #${proxy_num}${NC}" >&2
+    echo -e "${CYAN}════════════════════════════════════════════════════════${NC}\n" >&2
     
     # Показываем домены в столбцах
     local cols=3
@@ -67,17 +67,17 @@ select_domain() {
         for ((j=0; j<cols; j++)); do
             idx=$((i + j*rows))
             if [ $idx -lt $count ]; then
-                printf "${YELLOW}%3d)${NC} %-20s " "$((idx+1))" "${domains[$idx]}"
+                printf "${YELLOW}%3d)${NC} %-20s " "$((idx+1))" "${domains[$idx]}" >&2
             fi
         done
-        echo ""
+        echo "" >&2
     done
     
-    echo ""
-    read -p "Ваш выбор [1-${#domains[@]}]: " d_idx
+    echo "" >&2
+    read -p "Ваш выбор [1-${#domains[@]}]: " d_idx >&2
     
     if [ -z "$d_idx" ] || [ "$d_idx" -lt 1 ] || [ "$d_idx" -gt "${#domains[@]}" ]; then
-        echo -e "${YELLOW}Использую домен по умолчанию: google.com${NC}"
+        echo -e "${YELLOW}Использую домен по умолчанию: google.com${NC}" >&2
         echo "google.com"
     else
         echo "${domains[$((d_idx-1))]}"
@@ -99,6 +99,16 @@ reinstall_proxy1() {
     # Получаем текущую конфигурацию если есть
     if [ -f "$CONFIG_DIR/dual_config" ]; then
         source "$CONFIG_DIR/dual_config"
+    fi
+    
+    # Если PORT1 все еще пуст, пробуем получить его из работающего контейнера
+    if [ -z "$PORT1" ]; then
+        PORT1=$(docker inspect mtproto-proxy1 --format='{{range $p, $conf := .HostConfig.PortBindings}}{{(index $conf 0).HostPort}}{{end}}' 2>/dev/null)
+    fi
+    
+    # Если PORT1 все еще пуст, пробуем получить его из работающего контейнера
+    if [ -z "$PORT1" ]; then
+        PORT1=$(docker inspect mtproto-proxy1 --format='{{range $p, $conf := .HostConfig.PortBindings}}{{(index $conf 0).HostPort}}{{end}}' 2>/dev/null)
     fi
     
     # Выбор нового домена
@@ -159,6 +169,11 @@ reinstall_proxy2() {
     # Получаем текущую конфигурацию если есть
     if [ -f "$CONFIG_DIR/dual_config" ]; then
         source "$CONFIG_DIR/dual_config"
+    fi
+
+    # Если PORT1 все еще пуст, пробуем получить его из работающего контейнера
+    if [ -z "$PORT1" ]; then
+        PORT1=$(docker inspect mtproto-proxy1 --format='{{range $p, $conf := .HostConfig.PortBindings}}{{(index $conf 0).HostPort}}{{end}}' 2>/dev/null)
     fi
     
     # Выбор нового домена
@@ -326,6 +341,13 @@ menu_install_dual() {
     if [ "$port_choice" = "2" ]; then
         read -p "Порт для первого прокси: " PORT1
         read -p "Порт для второго прокси: " PORT2
+        
+        if [ "$PORT1" = "$PORT2" ]; then
+            echo -e "${RED}Ошибка: Порты должны быть разными!${NC}"
+            sleep 2
+            menu_install_dual
+            return
+        fi
     else
         PORT1=8443
         PORT2=9443
@@ -368,26 +390,7 @@ EOF
 # --- УСТАНОВКА ОДНОГО ПРОКСИ ---
 menu_install_single() {
     clear
-    echo -e "${CYAN}--- Выберите домен для маскировки (Fake TLS) ---${NC}"
-    domains=(
-        "google.com" "wikipedia.org" "habr.com" "github.com" 
-        "coursera.org" "udemy.com" "medium.com" "stackoverflow.com"
-        "bbc.com" "cnn.com" "reuters.com" "nytimes.com"
-        "lenta.ru" "rbc.ru" "ria.ru" "kommersant.ru"
-        "stepik.org" "duolingo.com" "khanacademy.org" "ted.com" "rutube.ru" "live.vkvideo.ru" 
-    )
-    
-    for i in "${!domains[@]}"; do
-        printf "${YELLOW}%2d)${NC} %-20s " "$((i+1))" "${domains[$i]}"
-        if [ $(( (i+1) % 3 )) -eq 0 ]; then
-            echo ""
-        fi
-    done
-    echo ""
-    
-    read -p "Ваш выбор [1-${#domains[@]}]: " d_idx
-    DOMAIN=${domains[$((d_idx-1))]}
-    DOMAIN=${DOMAIN:-google.com}
+    DOMAIN=$(select_domain "1")
 
     echo -e "\n${CYAN}--- Выберите порт ---${NC}"
     echo -e "1) 443 (Рекомендуется)"
