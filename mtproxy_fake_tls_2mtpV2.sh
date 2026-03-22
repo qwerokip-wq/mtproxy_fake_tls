@@ -40,7 +40,7 @@ get_ip() {
     echo "$ip" | grep -E -o '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -n 1
 }
 
-# --- ВЫБОР ДОМЕНА ---
+# --- ВЫБОР ДОМЕНА (ИСПРАВЛЕННАЯ ВЕРСИЯ) ---
 select_domain() {
     local proxy_num="$1"
     local domains=(
@@ -51,15 +51,28 @@ select_domain() {
         "stepik.org" "duolingo.com" "khanacademy.org" "ted.com" 
         "rutube.ru" "live.vkvideo.ru" "youtube.com" "reddit.com"
         "cloudflare.com" "microsoft.com" "apple.com" "amazon.com"
+        "gitlab.com" "bitbucket.org" "atlassian.com" "slack.com"
     )
     
-    echo -e "${CYAN}Выберите домен для прокси #${proxy_num}:${NC}"
-    for i in "${!domains[@]}"; do
-        printf "${YELLOW}%2d)${NC} %-20s " "$((i+1))" "${domains[$i]}"
-        if [ $(( (i+1) % 3 )) -eq 0 ]; then
-            echo ""
-        fi
+    echo -e "\n${CYAN}════════════════════════════════════════════════════════${NC}"
+    echo -e "${CYAN}        Выберите домен для прокси #${proxy_num}${NC}"
+    echo -e "${CYAN}════════════════════════════════════════════════════════${NC}\n"
+    
+    # Показываем домены в столбцах
+    local cols=3
+    local count=${#domains[@]}
+    local rows=$(( (count + cols - 1) / cols ))
+    
+    for ((i=0; i<rows; i++)); do
+        for ((j=0; j<cols; j++)); do
+            idx=$((i + j*rows))
+            if [ $idx -lt $count ]; then
+                printf "${YELLOW}%3d)${NC} %-20s " "$((idx+1))" "${domains[$idx]}"
+            fi
+        done
+        echo ""
     done
+    
     echo ""
     read -p "Ваш выбор [1-${#domains[@]}]: " d_idx
     
@@ -81,6 +94,11 @@ reinstall_proxy1() {
         echo -e "${YELLOW}[*] Останавливаю и удаляю старый прокси #1...${NC}"
         docker stop mtproto-proxy1 &>/dev/null
         docker rm mtproto-proxy1 &>/dev/null
+    fi
+    
+    # Получаем текущую конфигурацию если есть
+    if [ -f "$CONFIG_DIR/dual_config" ]; then
+        source "$CONFIG_DIR/dual_config"
     fi
     
     # Выбор нового домена
@@ -111,10 +129,6 @@ reinstall_proxy1() {
         nineseconds/mtg:2 simple-run -n 1.1.1.1 -i prefer-ipv4 0.0.0.0:"$PORT1" "$SECRET1" > /dev/null
     
     # Сохраняем конфигурацию
-    if [ -f "$CONFIG_DIR/dual_config" ]; then
-        source "$CONFIG_DIR/dual_config"
-    fi
-    
     cat > "$CONFIG_DIR/dual_config" << EOF
 PORT1=$PORT1
 PORT2=${PORT2:-9443}
@@ -140,6 +154,11 @@ reinstall_proxy2() {
         echo -e "${YELLOW}[*] Останавливаю и удаляю старый прокси #2...${NC}"
         docker stop mtproto-proxy2 &>/dev/null
         docker rm mtproto-proxy2 &>/dev/null
+    fi
+    
+    # Получаем текущую конфигурацию если есть
+    if [ -f "$CONFIG_DIR/dual_config" ]; then
+        source "$CONFIG_DIR/dual_config"
     fi
     
     # Выбор нового домена
@@ -181,10 +200,6 @@ reinstall_proxy2() {
         nineseconds/mtg:2 simple-run -n 1.1.1.1 -i prefer-ipv4 0.0.0.0:"$PORT2" "$SECRET2" > /dev/null
     
     # Сохраняем конфигурацию
-    if [ -f "$CONFIG_DIR/dual_config" ]; then
-        source "$CONFIG_DIR/dual_config"
-    fi
-    
     cat > "$CONFIG_DIR/dual_config" << EOF
 PORT1=${PORT1:-8443}
 PORT2=$PORT2
@@ -293,7 +308,7 @@ EOF
     echo -e "\n${GREEN}[✓] Ссылки сохранены в: $CONFIG_DIR/links.txt${NC}"
 }
 
-# --- УСТАНОВКА ДВУХ ПРОКСИ ---
+# --- УСТАНОВКА ДВУХ ПРОКСИ (ИСПРАВЛЕННАЯ) ---
 menu_install_dual() {
     clear
     echo -e "${CYAN}=== Установка двух прокси ===${NC}\n"
@@ -364,10 +379,13 @@ menu_install_single() {
     
     for i in "${!domains[@]}"; do
         printf "${YELLOW}%2d)${NC} %-20s " "$((i+1))" "${domains[$i]}"
-        [[ $(( (i+1) % 2 )) -eq 0 ]] && echo ""
+        if [ $(( (i+1) % 3 )) -eq 0 ]; then
+            echo ""
+        fi
     done
+    echo ""
     
-    read -p "Ваш выбор [1-22]: " d_idx
+    read -p "Ваш выбор [1-${#domains[@]}]: " d_idx
     DOMAIN=${domains[$((d_idx-1))]}
     DOMAIN=${DOMAIN:-google.com}
 
