@@ -15,7 +15,7 @@
 
 ## 📥 Быстрая установка (One-Liner)
 
-Просто скопируйте эту команду и вставьте в терминал вашего сервера (работает на Ubuntu/Debian/CentOS):
+Просто скопируйте эту команду и вставьте в терминал вашего сервера (работает на Ubuntu/Debian/CentOS). управление команда `**mtproxy**`
 
 ```bash
 wget -O mtproxy_fake_tls.sh https://raw.githubusercontent.com/qwerokip-wq/mtproxy_fake_tls/refs/heads/main/mtproxy_fake_tls.sh && chmod +x mtproxy_fake_tls.sh && sudo ./mtproxy_fake_tls.sh
@@ -30,4 +30,9 @@ wget -O mtproxy_fake_tls_2mtp.sh https://raw.githubusercontent.com/qwerokip-wq/m
 
 ```bash
 wget -O mtproxy_fake_tls_2mtpV2.sh https://raw.githubusercontent.com/qwerokip-wq/mtproxy_fake_tls/refs/heads/main/mtproxy_fake_tls_2mtpV2.sh && chmod +x mtproxy_fake_tls_2mtpV2.sh && sudo ./mtproxy_fake_tls_2mtpV2.sh
+```
+## 📥 Устанавливает сразу 2 прокси с разными портами и секретами c возможностю их редактирования и переустановки каждого отдельно + выбор использовать домен или ip
+
+```bash
+wget -O mtproxy_fake_tls_2mtpV3.sh https://raw.githubusercontent.com/qwerokip-wq/mtproxy_fake_tls/refs/heads/main/mtproxy_fake_tls_2mtpV3.sh && chmod +x mtproxy_fake_tls_2mtpV3.sh && sudo ./mtproxy_fake_tls_2mtpV3.sh
 ```
