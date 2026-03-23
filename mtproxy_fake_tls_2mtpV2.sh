@@ -40,6 +40,22 @@ get_ip() {
     echo "$ip" | grep -E -o '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -n 1
 }
 
+validate_port() {
+    local port="$1"
+    if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+        return 1
+    fi
+    if netstat -tuln 2>/dev/null | grep -q ":$port " || ss -tuln 2>/dev/null | grep -q ":$port "; then
+        return 2
+    fi
+    return 0
+}
+
+clear_secrets() {
+    unset SECRET SECRET1 SECRET2
+    HISTFILE=/dev/null
+}
+
 # --- ВЫБОР ДОМЕНА (ИСПРАВЛЕННАЯ ВЕРСИЯ) ---
 select_domain() {
     local proxy_num="$1"
@@ -101,12 +117,6 @@ reinstall_proxy1() {
         source "$CONFIG_DIR/dual_config"
     fi
     
-    # Если PORT1 все еще пуст, пробуем получить его из работающего контейнера
-    if [ -z "$PORT1" ]; then
-        PORT1=$(docker inspect mtproto-proxy1 --format='{{range $p, $conf := .HostConfig.PortBindings}}{{(index $conf 0).HostPort}}{{end}}' 2>/dev/null)
-    fi
-    
-    # Если PORT1 все еще пуст, пробуем получить его из работающего контейнера
     if [ -z "$PORT1" ]; then
         PORT1=$(docker inspect mtproto-proxy1 --format='{{range $p, $conf := .HostConfig.PortBindings}}{{(index $conf 0).HostPort}}{{end}}' 2>/dev/null)
     fi
@@ -125,7 +135,18 @@ reinstall_proxy1() {
     case $p_choice in
         2) PORT1=443 ;;
         3) PORT1=8443 ;;
-        4) read -p "Введите свой порт: " PORT1 ;;
+        4) 
+            while true; do
+                read -p "Введите свой порт: " PORT1
+                if validate_port "$PORT1"; then
+                    break
+                elif [ $? -eq 2 ]; then
+                    echo -e "${RED}Порт $PORT1 уже занят!${NC}"
+                else
+                    echo -e "${RED}Неверный порт! Введите число от 1 до 65535${NC}"
+                fi
+            done
+            ;;
         *) PORT1=${PORT1:-8443} ;;
     esac
     
@@ -147,6 +168,7 @@ SECRET2=${SECRET2:-}
 DOMAIN1=$DOMAIN1
 DOMAIN2=${DOMAIN2:-}
 EOF
+    clear_secrets
     
     clear
     echo -e "${GREEN}✓ Прокси #1 успешно переустановлен!${NC}"
@@ -192,7 +214,18 @@ reinstall_proxy2() {
         2) PORT2=9443 ;;
         3) PORT2=443 ;;
         4) PORT2=8443 ;;
-        5) read -p "Введите свой порт: " PORT2 ;;
+        5) 
+            while true; do
+                read -p "Введите свой порт: " PORT2
+                if validate_port "$PORT2"; then
+                    break
+                elif [ $? -eq 2 ]; then
+                    echo -e "${RED}Порт $PORT2 уже занят!${NC}"
+                else
+                    echo -e "${RED}Неверный порт! Введите число от 1 до 65535${NC}"
+                fi
+            done
+            ;;
         *) PORT2=${PORT2:-9443} ;;
     esac
     
@@ -223,6 +256,7 @@ SECRET2=$SECRET2
 DOMAIN1=${DOMAIN1:-}
 DOMAIN2=$DOMAIN2
 EOF
+    clear_secrets
     
     clear
     echo -e "${GREEN}✓ Прокси #2 успешно переустановлен!${NC}"
@@ -339,8 +373,26 @@ menu_install_dual() {
     read -p "Выбор: " port_choice
     
     if [ "$port_choice" = "2" ]; then
-        read -p "Порт для первого прокси: " PORT1
-        read -p "Порт для второго прокси: " PORT2
+        while true; do
+            read -p "Порт для первого прокси: " PORT1
+            if validate_port "$PORT1"; then
+                break
+            elif [ $? -eq 2 ]; then
+                echo -e "${RED}Порт $PORT1 уже занят!${NC}"
+            else
+                echo -e "${RED}Неверный порт! Введите число от 1 до 65535${NC}"
+            fi
+        done
+        while true; do
+            read -p "Порт для второго прокси: " PORT2
+            if validate_port "$PORT2"; then
+                break
+            elif [ $? -eq 2 ]; then
+                echo -e "${RED}Порт $PORT2 уже занят!${NC}"
+            else
+                echo -e "${RED}Неверный порт! Введите число от 1 до 65535${NC}"
+            fi
+        done
         
         if [ "$PORT1" = "$PORT2" ]; then
             echo -e "${RED}Ошибка: Порты должны быть разными!${NC}"
@@ -381,6 +433,7 @@ SECRET2=$SECRET2
 DOMAIN1=$DOMAIN1
 DOMAIN2=$DOMAIN2
 EOF
+    clear_secrets
     
     clear
     show_dual_config
@@ -399,7 +452,18 @@ menu_install_single() {
     read -p "Выбор: " p_choice
     case $p_choice in
         2) PORT=8443 ;;
-        3) read -p "Введите свой порт: " PORT ;;
+        3) 
+            while true; do
+                read -p "Введите свой порт: " PORT
+                if validate_port "$PORT"; then
+                    break
+                elif [ $? -eq 2 ]; then
+                    echo -e "${RED}Порт $PORT уже занят!${NC}"
+                else
+                    echo -e "${RED}Неверный порт! Введите число от 1 до 65535${NC}"
+                fi
+            done
+            ;;
         *) PORT=443 ;;
     esac
 
