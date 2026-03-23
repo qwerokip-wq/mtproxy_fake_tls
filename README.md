@@ -15,7 +15,7 @@
 
 ## 📥 Быстрая установка (One-Liner)
 
-Просто скопируйте эту команду и вставьте в терминал вашего сервера (работает на Ubuntu/Debian/CentOS). управление команда `**mtproxy**`
+Просто скопируйте эту команду и вставьте в терминал вашего сервера (работает на Ubuntu/Debian/CentOS). управление команда ``mtproxy``
 
 ```bash
 wget -O mtproxy_fake_tls.sh https://raw.githubusercontent.com/qwerokip-wq/mtproxy_fake_tls/refs/heads/main/mtproxy_fake_tls.sh && chmod +x mtproxy_fake_tls.sh && sudo ./mtproxy_fake_tls.sh
