@@ -33,3 +33,8 @@ wget -O mtproxy_fake_tls_2mtp.sh https://raw.githubusercontent.com/qwerokip-wq/m
 wget -O mtproxy_fake_tls_2mtpV2.sh https://raw.githubusercontent.com/qwerokip-wq/mtproxy_fake_tls/refs/heads/main/mtproxy_fake_tls_2mtpV2.sh && chmod +x mtproxy_fake_tls_2mtpV2.sh && sudo ./mtproxy_fake_tls_2mtpV2.sh
 
 ```
+
+```bash
+wget -O mtproxy_fake_tls_2mtpV3.sh https://raw.githubusercontent.com/qwerokip-wq/mtproxy_fake_tls/refs/heads/main/mtproxy_fake_tls_2mtpV3.sh && chmod +x mtproxy_fake_tls_2mtpV3.sh && sudo ./mtproxy_fake_tls_2mtpV3.sh
+
+```
