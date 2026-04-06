@@ -57,27 +57,35 @@ clear_secrets() {
 }
 
 get_server_addr() {
-    if [ -n "$CUSTOM_DOMAIN" ]; then
-        echo "$CUSTOM_DOMAIN"
+    local proxy_num="$1"
+    local custom_var="CUSTOM_DOMAIN${proxy_num}"
+    local custom_val="${!custom_var}"
+    
+    if [ -n "$custom_val" ]; then
+        echo "$custom_val"
     else
         get_ip
     fi
 }
 
 prompt_custom_domain() {
-    echo -e "\n${CYAN}--- Домен для подключения ---${NC}"
+    local proxy_num="$1"
+    local custom_var="CUSTOM_DOMAIN${proxy_num}"
+    
+    echo -e "\n${CYAN}--- Домен для подключения (прокси #${proxy_num}) ---${NC}"
     echo -e "1) Использовать IP сервера (${IP:-автоопределение})"
     echo -e "2) Указать свой домен"
     read -p "Выбор [1-2]: " dom_choice
     
     case $dom_choice in
         2) 
-            read -p "Введите ваш домен (например proxy.example.com): " CUSTOM_DOMAIN
-            if [ -z "$CUSTOM_DOMAIN" ]; then
-                CUSTOM_DOMAIN="$IP"
+            read -p "Введите ваш домен (например proxy.example.com): " custom_val
+            if [ -z "$custom_val" ]; then
+                custom_val="$IP"
             fi
+            eval "$custom_var='$custom_val'"
             ;;
-        *) CUSTOM_DOMAIN="" ;;
+        *) eval "$custom_var=''" ;;
     esac
 }
 
@@ -141,7 +149,7 @@ reinstall_proxy1() {
     fi
     
     IP=$(get_ip)
-    prompt_custom_domain
+    prompt_custom_domain "1"
     
     if [ -z "$PORT1" ]; then
         PORT1=$(docker inspect mtproto-proxy1 --format='{{range $p, $conf := .HostConfig.PortBindings}}{{(index $conf 0).HostPort}}{{end}}' 2>/dev/null)
@@ -193,7 +201,8 @@ SECRET1=$SECRET1
 SECRET2=${SECRET2:-}
 DOMAIN1=$DOMAIN1
 DOMAIN2=${DOMAIN2:-}
-CUSTOM_DOMAIN=$CUSTOM_DOMAIN
+CUSTOM_DOMAIN1=${CUSTOM_DOMAIN1:-}
+CUSTOM_DOMAIN2=${CUSTOM_DOMAIN2:-}
 EOF
     clear_secrets
     
@@ -223,7 +232,7 @@ reinstall_proxy2() {
     fi
     
     IP=$(get_ip)
-    prompt_custom_domain
+    prompt_custom_domain "2"
     
     # Выбор нового домена
     DOMAIN2=$(select_domain "2")
@@ -282,7 +291,8 @@ SECRET1=${SECRET1:-}
 SECRET2=$SECRET2
 DOMAIN1=${DOMAIN1:-}
 DOMAIN2=$DOMAIN2
-CUSTOM_DOMAIN=$CUSTOM_DOMAIN
+CUSTOM_DOMAIN1=${CUSTOM_DOMAIN1:-}
+CUSTOM_DOMAIN2=${CUSTOM_DOMAIN2:-}
 EOF
     clear_secrets
     
@@ -315,7 +325,7 @@ show_single_proxy() {
         fi
     fi
     
-    SERVER_ADDR=$(get_server_addr)
+    SERVER_ADDR=$(get_server_addr "$num")
     LINK="tg://proxy?server=$SERVER_ADDR&port=$PORT&secret=$SECRET"
     
     echo -e "\n${GREEN}════════════════════════════════════════════════════════${NC}"
@@ -328,7 +338,7 @@ show_single_proxy() {
     echo -e "Secret: ${YELLOW}$SECRET${NC}"
     echo -e "Link: ${BLUE}$LINK${NC}"
     echo -e "\n${GREEN}QR Code:${NC}"
-    qrencode -t ANSIUTF8 "$LINK"
+    qrencode -t ANSIUTF8 -s 1 "$LINK"
     
     # Сохраняем ссылку
     echo "$LINK" > "$CONFIG_DIR/proxy${num}_link.txt"
@@ -352,9 +362,10 @@ show_dual_config() {
         return
     fi
     
-    SERVER_ADDR=$(get_server_addr)
-    LINK1="tg://proxy?server=$SERVER_ADDR&port=$PORT1&secret=$SECRET1"
-    LINK2="tg://proxy?server=$SERVER_ADDR&port=$PORT2&secret=$SECRET2"
+    SERVER_ADDR1=$(get_server_addr "1")
+    SERVER_ADDR2=$(get_server_addr "2")
+    LINK1="tg://proxy?server=$SERVER_ADDR1&port=$PORT1&secret=$SECRET1"
+    LINK2="tg://proxy?server=$SERVER_ADDR2&port=$PORT2&secret=$SECRET2"
     
     echo -e "\n${GREEN}════════════════════════════════════════════════════════${NC}"
     echo -e "${GREEN}           ПРОКСИ #1 (${DOMAIN1:-Fake TLS})${NC}"
@@ -363,7 +374,7 @@ show_dual_config() {
     echo -e "Secret: ${YELLOW}$SECRET1${NC}"
     echo -e "Link: ${BLUE}$LINK1${NC}"
     echo -e "\n${GREEN}QR Code:${NC}"
-    qrencode -t ANSIUTF8 "$LINK1"
+    qrencode -t ANSIUTF8 -s 1 "$LINK1"
     
     echo -e "\n${MAGENTA}════════════════════════════════════════════════════════${NC}"
     echo -e "${MAGENTA}           ПРОКСИ #2 (${DOMAIN2:-Fake TLS})${NC}"
@@ -372,7 +383,7 @@ show_dual_config() {
     echo -e "Secret: ${YELLOW}$SECRET2${NC}"
     echo -e "Link: ${BLUE}$LINK2${NC}"
     echo -e "\n${MAGENTA}QR Code:${NC}"
-    qrencode -t ANSIUTF8 "$LINK2"
+    qrencode -t ANSIUTF8 -s 1 "$LINK2"
     
     # Сохранение ссылок в файл
     cat > "$CONFIG_DIR/links.txt" << EOF
@@ -390,7 +401,8 @@ menu_install_dual() {
     echo -e "${CYAN}=== Установка двух прокси ===${NC}\n"
     
     IP=$(get_ip)
-    prompt_custom_domain
+    prompt_custom_domain "1"
+    prompt_custom_domain "2"
     
     # Выбор доменов
     DOMAIN1=$(select_domain "1")
@@ -462,7 +474,8 @@ SECRET1=$SECRET1
 SECRET2=$SECRET2
 DOMAIN1=$DOMAIN1
 DOMAIN2=$DOMAIN2
-CUSTOM_DOMAIN=$CUSTOM_DOMAIN
+CUSTOM_DOMAIN1=${CUSTOM_DOMAIN1:-}
+CUSTOM_DOMAIN2=${CUSTOM_DOMAIN2:-}
 EOF
     clear_secrets
     
@@ -474,6 +487,9 @@ EOF
 # --- УСТАНОВКА ОДНОГО ПРОКСИ ---
 menu_install_single() {
     clear
+    IP=$(get_ip)
+    prompt_custom_domain "1"
+    
     DOMAIN=$(select_domain "1")
 
     echo -e "\n${CYAN}--- Выберите порт ---${NC}"
@@ -512,22 +528,49 @@ menu_install_single() {
 
 # --- ПОКАЗ ОДНОЙ КОНФИГУРАЦИИ ---
 show_config() {
-    if ! docker ps | grep -q "mtproto-proxy"; then 
-        echo -e "${RED}Прокси не найден!${NC}"
+    local num="$1"
+    local container="mtproto-proxy$num"
+    
+    if ! docker ps | grep -q "$container"; then 
+        echo -e "${RED}Прокси #$num не найден или не запущен!${NC}"
         return
     fi
-    SECRET=$(docker inspect mtproto-proxy --format='{{range .Config.Cmd}}{{.}} {{end}}' | awk '{print $NF}')
+    
     IP=$(get_ip)
-    PORT=$(docker inspect mtproto-proxy --format='{{range $p, $conf := .HostConfig.PortBindings}}{{(index $conf 0).HostPort}}{{end}}' 2>/dev/null)
-    PORT=${PORT:-443}
-    SERVER_ADDR=$(get_server_addr)
+    PORT=$(docker inspect "$container" --format='{{range $p, $conf := .HostConfig.PortBindings}}{{(index $conf 0).HostPort}}{{end}}' 2>/dev/null)
+    SECRET=$(docker inspect "$container" --format='{{range .Config.Cmd}}{{.}} {{end}}' | awk '{print $NF}')
+    
+    if [ -f "$CONFIG_DIR/dual_config" ]; then
+        source "$CONFIG_DIR/dual_config"
+    fi
+    
+    SERVER_ADDR=$(get_server_addr "$num")
     LINK="tg://proxy?server=$SERVER_ADDR&port=$PORT&secret=$SECRET"
 
-    echo -e "\n${GREEN}=== ПАНЕЛЬ ДАННЫХ ===${NC}"
-    echo -e "IP: $IP | Port: $PORT"
-    echo -e "Secret: $SECRET"
+    echo -e "\n${GREEN}════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}           ПРОКСИ #$num${NC}"
+    echo -e "${GREEN}════════════════════════════════════════════════════════${NC}"
+    echo -e "IP: ${CYAN}$IP${NC} | Port: ${CYAN}$PORT${NC}"
+    echo -e "Secret: ${YELLOW}$SECRET${NC}"
     echo -e "Link: ${BLUE}$LINK${NC}"
-    qrencode -t ANSIUTF8 "$LINK"
+    echo -e "\n${GREEN}QR Code:${NC}"
+    qrencode -t ANSIUTF8 -s 1 "$LINK"
+}
+
+# --- МЕНЮ ВЫБОРА ПРОКСИ ---
+menu_show_single() {
+    clear
+    echo -e "${CYAN}=== Показать данные подключения ===${NC}\n"
+    echo -e "1) Прокси #1"
+    echo -e "2) Прокси #2"
+    read -p "Выбор [1-2]: " choice
+    
+    case $choice in
+        1) show_config 1 ;;
+        2) show_config 2 ;;
+        *) echo -e "${RED}Неверный ввод${NC}" ;;
+    esac
+    read -p "Нажмите Enter..."
 }
 
 # --- УДАЛЕНИЕ ВСЕХ ПРОКСИ ---
@@ -594,8 +637,10 @@ show_exit() {
     clear
     if docker ps | grep -q "mtproto-proxy1"; then
         show_dual_config 2>/dev/null
+    elif docker ps | grep -q "mtproto-proxy2"; then
+        show_config 2 2>/dev/null
     elif docker ps | grep -q "mtproto-proxy"; then
-        show_config 2>/dev/null
+        show_config 1 2>/dev/null
     fi
     echo -e "\n${GREEN}До свидания!${NC}"
     exit 0
@@ -626,7 +671,7 @@ while true; do
         1) menu_install_single ;;
         2) menu_install_dual ;;
         3) menu_dual_management ;;
-        4) clear; show_config; read -p "Нажмите Enter..." ;;
+        4) clear; menu_show_single ;;
         5) clear; show_dual_config; read -p "Нажмите Enter..." ;;
         6) menu_remove_all ;;
         0) show_exit ;;
